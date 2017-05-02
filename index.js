@@ -4,7 +4,7 @@ const fs = require("fs");
 
 ezs.use(require("./ezsLocal"));
 
-const url = ["https://api.istex.fr/document/?q=language:gle"];
+const url = ["https://api.istex.fr/document/?q=language:rus"];
 
 from(url)
     .pipe(ezs("scroll"),{output: 'doi'})

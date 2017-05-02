@@ -5,8 +5,8 @@ const maxParallel = 10;
 
 let nextURI = undefined;
 
-let _feed;
-let done;
+let _feed = undefined;
+let done = false;
 
 /**
  * scroll use the scrolling features of API istex
@@ -53,6 +53,10 @@ exports.scroll = function(data, feed) {
   });
 };
 
+/**
+ * Get the nextURI in the API and call himself until body have noMoreScrollResults : true
+ * 
+ */
 function scrollRecursive() {
   const options = {
     uri: nextURI,
