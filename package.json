@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "async": "^2.4.0",
     "ezs": "^1.1.3",
     "ezs-istex": "^2.0.1",
     "from": "^0.1.7",

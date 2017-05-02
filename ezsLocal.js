@@ -1,13 +1,20 @@
 const request = require("request");
 const url = require("url");
+const async = require("async");
+const maxParallel = 10;
 
 let nextURI = undefined;
+
+let _feed;
+let done;
 
 /**
  * scroll use the scrolling features of API istex
  * data: url
  */
 exports.scroll = function(data, feed) {
+  console.time("scroll");
+
   const output = this.getParam("output", "doi,id");
   const query = url.parse(data);
 
@@ -33,13 +40,20 @@ exports.scroll = function(data, feed) {
 
       if (!body.noMoreScrollResults) {
         nextURI = body.nextScrollURI;
-        scrollRecursive(feed);
+
+        _feed = feed;
+
+        let parallelArray = [];
+        for (let i = 0; i < maxParallel; i++) {
+          parallelArray.push(scrollRecursive);
+        }
+        async.parallel(parallelArray);
       }
     }
   });
 };
 
-function scrollRecursive(feed) {
+function scrollRecursive() {
   const options = {
     uri: nextURI,
     method: "GET",
@@ -50,11 +64,20 @@ function scrollRecursive(feed) {
     if (!error) {
       if (body.hits.length) {
         const out = JSON.stringify(body.hits);
-        feed.write(out);
+        _feed.write(out);
       }
 
-      if (!body.noMoreScrollResults) {
-        return scrollRecursive(feed);
+      if (!body.noMoreScrollResults && !done) {
+        return scrollRecursive();
+      } else {
+
+        /**
+         * Show the time one time
+         */
+        if (!done) {
+          console.timeEnd("scroll");
+          done = true;
+        }
       }
     }
   });
