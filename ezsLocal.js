@@ -15,7 +15,7 @@ exports.scroll = function(data, feed) {
     protocol: "https:",
     hostname: "api-v5.istex.fr",
     pathname: "document",
-    search: `${query.search}&scroll=30s`
+    search: `${query.search}&scroll=30s&output=${output}`
   };
 
   const options = {
