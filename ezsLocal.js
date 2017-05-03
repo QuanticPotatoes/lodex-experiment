@@ -12,7 +12,7 @@ exports.scroll = function(data, feed) {
   //console.time("scroll");
 
   const output = this.getParam("output", "language,doi,id");
-  json = this.getParam("json",true);
+  json = this.getParam("json", true);
   const query = url.parse(data);
 
   const urlObj = {
@@ -41,6 +41,14 @@ exports.scroll = function(data, feed) {
 
         scrollRecursive(feed);
       }
+    } else {
+      console.error("options:", options);
+      console.error("error", error);
+      console.error("response",
+        reponse.statusCode,
+        reponse.statusMessage,
+        reponse.headers
+      );
     }
   });
 };
@@ -61,9 +69,17 @@ function scrollRecursive(feed) {
       let out = JSON.stringify(body);
       if (!body.noMoreScrollResults) {
         scrollRecursive(feed);
-      return feed.write(body);
-    }
+        return feed.write(body);
+      }
+    } else {
+      console.error("options:", options);
+      console.error("error", error);
+      console.error(
+        "response",
+        reponse.statusCode,
+        reponse.statusMessage,
+        reponse.headers
+      );
     }
   });
 }
-
