@@ -1,21 +1,18 @@
 const request = require("request");
 const url = require("url");
-const async = require("async");
-const maxParallel = 10;
 
 let nextURI = undefined;
-
-let _feed = undefined;
-let done = false;
+let json;
 
 /**
  * scroll use the scrolling features of API istex
  * data: url
  */
 exports.scroll = function(data, feed) {
-  console.time("scroll");
+  //console.time("scroll");
 
-  const output = this.getParam("output", "doi,id");
+  const output = this.getParam("output", "language,doi,id");
+  json = this.getParam("json",true);
   const query = url.parse(data);
 
   const urlObj = {
@@ -28,26 +25,21 @@ exports.scroll = function(data, feed) {
   const options = {
     uri: url.format(urlObj),
     method: "GET",
-    json: true
+    json
   };
 
   request(options, (error, reponse, body) => {
     if (!error) {
       if (body.hits.length) {
-        const out = JSON.stringify(body.hits);
-        feed.write(out);
+        let out = JSON.stringify(body);
+
+        feed.write(body);
       }
 
       if (!body.noMoreScrollResults) {
         nextURI = body.nextScrollURI;
 
-        _feed = feed;
-
-        let parallelArray = [];
-        for (let i = 0; i < maxParallel; i++) {
-          parallelArray.push(scrollRecursive);
-        }
-        async.parallel(parallelArray);
+        scrollRecursive(feed);
       }
     }
   });
@@ -57,32 +49,21 @@ exports.scroll = function(data, feed) {
  * Get the nextURI in the API and call himself until body have noMoreScrollResults : true
  * 
  */
-function scrollRecursive() {
+function scrollRecursive(feed) {
   const options = {
     uri: nextURI,
     method: "GET",
-    json: true
+    json
   };
 
   request(options, (error, reponse, body) => {
     if (!error) {
-      if (body.hits.length) {
-        const out = JSON.stringify(body.hits);
-        _feed.write(out);
-      }
-
-      if (!body.noMoreScrollResults && !done) {
-        return scrollRecursive();
-      } else {
-
-        /**
-         * Show the time one time
-         */
-        if (!done) {
-          console.timeEnd("scroll");
-          done = true;
-        }
-      }
+      let out = JSON.stringify(body);
+      if (!body.noMoreScrollResults) {
+        scrollRecursive(feed);
+      return feed.write(body);
+    }
     }
   });
 }
+
