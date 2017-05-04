@@ -4,57 +4,54 @@ const jsonld = require("jsonld");
 
 let nextURI = undefined;
 let json;
-let v= 0;
-exports.istexQueryToNquads = function(data,feed) {
+let v = 0;
+exports.istexQueryToNquads = function(data, feed) {
+  if (this.isLast) {
+    feed.end();
+  }
 
-    if(this.isLast){
-        feed.close();
+  const graph = this.getParam("graph", "test");
+  const context = {
+    doi: "http://purl.org/ontology/bibo/doi"
+    //"language":"http://purl.org/dc/elements/1.1/langue",
+  };
+
+  /**
+   * Transform "id" to "@id"
+   */
+  let hits = data.hits;
+
+  hits.map(e => {
+    e.doi = e.doi[0];
+  });
+
+  let hitsString = JSON.stringify(hits).replace(/\"id\":/g, '"@id":');
+
+  const doc = { 
+  "@context": { 
+    "doi": "http://purl.org/ontology/bibo/doi",
+    "schema": "http://schema.org/"
+   },
+  "@id" : "hello",
+  "@graph": [
+    {
+      "@id": "http://json-ld.org/playground/coucou",
+      "doi": "doitest"
     }
+  ]
+};
 
-    const graph = this.getParam("graph","test");
-    const context = {
-        "doi":"http://purl.org/ontology/bibo/doi",
-        //"language":"http://purl.org/dc/elements/1.1/langue",
+  //console.log(doc);
+
+  jsonld.toRDF(doc, { format: "application/nquads" }, (err, nquads) => {
+    if (err) {
+      //feed.send(null);
+      console.error("toRDF: ", err);
     }
-
-    /**
-     * Transform "id" to "@id"
-     */
-    let hits = data.hits;
-
-    hits.map((e) => {
-      e.doi = e.doi[0];
-    });
-
-    let hitsString = JSON.stringify(hits)
-                      //  .replace(/\"id\":/g,"\"@id\":");
-
-
-    console.log(hitsString);
-
-    /*const doc = { 
-        "@id": "https://api-v5.istex.fr/graph",
-        "@graph": jsonHits}*/
-
-            // console.log(doc);
-
-//     jsonld.compact(doc,context,function(err, compacted) {
-//        // console.log(JSON.stringify(compacted));
-//         jsonld.toRDF(compacted,{format: 'application/nquads'},(err,nquads)=>{
-//             if(err) {
-//                 //feed.send(null);
-//                 //console.error("toRDF: ", err);
-//             }
-//             feed.write(nquads);
-//             console.log("coucou");
-//         });
-    
-// });
-
-feed.write('0')
-        
-
-}
+    console.log(nquads);
+    feed.write(nquads);
+  });
+};
 
 /**
  * scroll use the scrolling features of API istex
@@ -64,19 +61,18 @@ exports.scroll = function(data, feed) {
   //console.time("scroll");
 
   const output = this.getParam("output", "doi");
-  const sid = this.getParam("sid","lodex");
+  const sid = this.getParam("sid", "lodex");
   json = this.getParam("json", true);
   const query = url.parse(data);
 
-
   const urlObj = {
     protocol: "https:",
+    /** Remove when api turn to v5 */
     hostname: "api-v5.istex.fr",
     pathname: "document",
     search: `${query.search}&scroll=30s&output=${output}&sid=${sid}`
   };
 
-  console.log(url.format(urlObj))
   const options = {
     uri: url.format(urlObj),
     method: "GET",
@@ -85,11 +81,7 @@ exports.scroll = function(data, feed) {
 
   request(options, (error, reponse, body) => {
     if (!error) {
-      if (body.hits.length) {
-        let out = JSON.stringify(body);
-
-        feed.write(body);
-      }
+      feed.write(body);
 
       if (!body.noMoreScrollResults) {
         nextURI = body.nextScrollURI;
@@ -99,7 +91,8 @@ exports.scroll = function(data, feed) {
     } else {
       console.error("options:", options);
       console.error("error", error);
-      console.error("response",
+      console.error(
+        "response",
         reponse.statusCode,
         reponse.statusMessage,
         reponse.headers
@@ -123,8 +116,8 @@ function scrollRecursive(feed) {
     if (!error) {
       let out = JSON.stringify(body);
       if (!body.noMoreScrollResults) {
-        scrollRecursive(feed);
-        return feed.write(body);
+        feed.write(body);
+        return scrollRecursive(feed);
       }
     } else {
       console.error("options:", options);
@@ -135,6 +128,8 @@ function scrollRecursive(feed) {
         reponse.statusMessage,
         reponse.headers
       );
+
+      feed.end();
     }
   });
 }
