@@ -5,12 +5,14 @@ const jsonld = require("jsonld");
 let nextURI = undefined;
 let json;
 let v = 0;
-exports.istexQueryToNquads = function(data, feed) {
+
+exports.convertIstexQuery = function(data, feed) {
   if (this.isLast) {
     feed.end();
   }
 
-  const graph = this.getParam("graph", "test");
+  const graph = this.getParam("graph", "http://json-ld.org/playground/graph");
+
   const context = {
     doi: "http://purl.org/ontology/bibo/doi"
     //"language":"http://purl.org/dc/elements/1.1/langue",
@@ -27,19 +29,22 @@ exports.istexQueryToNquads = function(data, feed) {
 
   let hitsString = JSON.stringify(hits).replace(/\"id\":/g, '"@id":');
 
-  const doc = { 
-  "@context": { 
-    "doi": "http://purl.org/ontology/bibo/doi",
-    "schema": "http://schema.org/"
-   },
-  "@id" : "hello",
-  "@graph": [
-    {
-      "@id": "http://json-ld.org/playground/coucou",
-      "doi": "doitest"
-    }
-  ]
-};
+  const doc = {
+    "@context": {
+      doi: "http://purl.org/ontology/bibo/doi",
+      language: "http://purl.org/ontology/dc/language",
+      schema: "http://schema.org/"
+    },
+    "@id": graph,
+    "@graph": [
+      {
+        "@id": "http://json-ld.org/playground/coucou",
+        doi: "doitest",
+        language: "en"
+      }
+    ]
+  };
+
 
   //console.log(doc);
 
@@ -103,7 +108,7 @@ exports.scroll = function(data, feed) {
 
 /**
  * Get the nextURI in the API and call himself until body have noMoreScrollResults : true
- * 
+ *
  */
 function scrollRecursive(feed) {
   const options = {

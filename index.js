@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const ezs = require("ezs");
 const from = require("from");
 const fs = require("fs");
@@ -11,5 +13,5 @@ let test;
 from(url)
     .pipe(ezs("scroll"))
     //.pipe(ezs((data,feed) => { console.log(data); feed.end();}))
-    .pipe(ezs("istexQueryToNquads"))
+    .pipe(ezs("convertIstexQuery"))
     //.pipe(process.stdout);
