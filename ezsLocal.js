@@ -29,6 +29,8 @@ exports.convertIstexQuery = function(data, feed) {
 
   let hitsString = JSON.stringify(hits).replace(/\"id\":/g, '"@id":');
 
+  console.log(JSON.parse(hitsString.replace(/\"doi\":/g, '"@id":')));
+
   const doc = {
     "@context": {
       doi: "http://purl.org/ontology/bibo/doi",
@@ -36,16 +38,16 @@ exports.convertIstexQuery = function(data, feed) {
       schema: "http://schema.org/"
     },
     "@id": graph,
-    "@graph": [
-      {
-        "@id": "http://json-ld.org/playground/coucou",
-        doi: "doitest",
-        language: "en"
-      }
-    ]
+    "@graph": JSON.parse(hitsString)
   };
 
-
+    // [
+    //   {
+    //     "@id": "http://json-ld.org/playground/coucou",
+    //     doi: "doitest",
+    //     language: "en"
+    //   }
+    // ]
   //console.log(doc);
 
   jsonld.toRDF(doc, { format: "application/nquads" }, (err, nquads) => {
