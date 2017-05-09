@@ -1,10 +1,13 @@
 const request = require("request");
 const url = require("url");
 const jsonld = require("jsonld");
+const debug = require("debug")("ezsLocal");
 
 let nextURI = undefined;
 let json;
 let v = 0;
+
+exports.request = request;
 
 exports.convertIstexQuery = function(data, feed) {
   if (this.isLast) {
@@ -12,6 +15,7 @@ exports.convertIstexQuery = function(data, feed) {
   }
 
   const graph = this.getParam("graph", "http://json-ld.org/playground/graph");
+  let hits = data.hits;
 
   const context = {
     doi: "http://purl.org/ontology/bibo/doi"
@@ -21,38 +25,27 @@ exports.convertIstexQuery = function(data, feed) {
   /**
    * Transform "id" to "@id"
    */
-  let hits = data.hits;
-
   hits.map(e => {
     e.doi = e.doi[0];
+    e.id = "https://api-v5.fr/document/" + e.id;
   });
 
-  let hitsString = JSON.stringify(hits).replace(/\"id\":/g, '"@id":');
+  let hitsString = JSON.stringify(hits).replace(/\"id\":/g, "\"@id\":");
 
-  console.log(JSON.parse(hitsString.replace(/\"doi\":/g, '"@id":')));
-
+  //console.log(data.hits);
   const doc = {
     "@context": {
       doi: "http://purl.org/ontology/bibo/doi",
-      language: "http://purl.org/ontology/dc/language",
+      //language: "http://purl.org/ontology/dc/language",
       schema: "http://schema.org/"
     },
     "@id": graph,
-    "@graph": JSON.parse(hitsString)
+    "@graph":  JSON.parse(hitsString)
   };
-
-    // [
-    //   {
-    //     "@id": "http://json-ld.org/playground/coucou",
-    //     doi: "doitest",
-    //     language: "en"
-    //   }
-    // ]
-  //console.log(doc);
 
   jsonld.toRDF(doc, { format: "application/nquads" }, (err, nquads) => {
     if (err) {
-      //feed.send(null);
+      feed.end();
       console.error("toRDF: ", err);
     }
     console.log(nquads);
@@ -65,7 +58,10 @@ exports.convertIstexQuery = function(data, feed) {
  * data: url
  */
 exports.scroll = function(data, feed) {
-  //console.time("scroll");
+
+  if(this.isLast()) {
+    return feed.close();
+  }
 
   const output = this.getParam("output", "doi");
   const sid = this.getParam("sid", "lodex");
@@ -77,16 +73,15 @@ exports.scroll = function(data, feed) {
     /** Remove when api turn to v5 */
     hostname: "api-v5.istex.fr",
     pathname: "document",
-    search: `${query.search}&scroll=30s&output=${output}&sid=${sid}`
+    search: `${query.search}&scroll=30s&output=${output}&size=100&sid=${sid}`
   };
 
   const options = {
     uri: url.format(urlObj),
-    method: "GET",
     json
   };
 
-  request(options, (error, reponse, body) => {
+  request.get(options, (error, reponse, body) => {
     if (!error) {
       feed.write(body);
 
@@ -112,31 +107,63 @@ exports.scroll = function(data, feed) {
  * Get the nextURI in the API and call himself until body have noMoreScrollResults : true
  *
  */
+// function scrollRecursive(feed) {
+//   const options = {
+//     uri: nextURI,
+//     json
+//   };
+
+//   request.get(options, (error, reponse, body) => {
+//     if (!error) {
+//       let out = JSON.stringify(body);
+//       if (!body.noMoreScrollResults) {
+//         feed.write(body);
+//         return scrollRecursive(feed);
+//       }
+//     } else {
+//       console.error("options:", options);
+//       console.error("error", error);
+//       console.error(
+//         "response",
+//         reponse.statusCode,
+//         reponse.statusMessage,
+//         reponse.headers
+//       );
+
+//       feed.end();
+//     }
+//   });
+// }
+
+
 function scrollRecursive(feed) {
   const options = {
     uri: nextURI,
-    method: "GET",
-    json
+    method: 'GET',
+    json,
   };
 
-  request(options, (error, reponse, body) => {
-    if (!error) {
-      let out = JSON.stringify(body);
-      if (!body.noMoreScrollResults) {
-        feed.write(body);
-        return scrollRecursive(feed);
-      }
-    } else {
-      console.error("options:", options);
-      console.error("error", error);
+  request.get(options, (error, response, body) => {
+    if (error) {
+      /* eslint-disable */
+      console.error('options:', options);
+      console.error('error', error);
       console.error(
-        "response",
-        reponse.statusCode,
-        reponse.statusMessage,
-        reponse.headers
+        'response',
+        response && response.statusCode,
+        response && response.statusMessage,
+        response && response.headers
       );
-
-      feed.end();
+      /* eslint-enable */
+      return feed.end();
     }
+    if (body && body.hits && body.hits.length === 0) {
+      return feed.end();
+    }
+    feed.write(body);
+    if (body.noMoreScrollResults) {
+      return feed.end();
+    }
+    return scrollRecursive(feed);
   });
 }

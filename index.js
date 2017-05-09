@@ -10,8 +10,11 @@ const url = ["https://api.istex.fr/document/?q=language:rus"];
 
 let test;
 
-from(url)
-    .pipe(ezs("scroll"))
-    //.pipe(ezs((data,feed) => { console.log(data); feed.end();}))
-    .pipe(ezs("convertIstexQuery"))
-    //.pipe(process.stdout);
+from(url).pipe(ezs("scroll")).pipe(
+  ezs((data, feed) => {
+    console.log(data.nextScrollURI.length);
+    feed.end();
+  })
+);
+//.pipe(ezs("convertIstexQuery"))
+//.pipe(process.stdout);
