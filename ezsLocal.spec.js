@@ -1,10 +1,9 @@
 const should = require("should");
 const sinon = require("sinon");
-const request = require("./ezsLocal.js").request;
+const request = require("request");
 const expect = require("expect");
 const unit = require("./ezsLocal.js");
 const ezs = require("ezs");
-const url = require("url");
 const from = require("from");
 const fs = require("fs");
 
@@ -151,6 +150,9 @@ let dataTest = [
 var sandbox;
 beforeEach(() => {
   sandbox = sinon.sandbox.create();
+  const s = sandbox.stub(request, "get");
+  s.onFirstCall().yields(null, null,JSON.parse(dataTest[0]));
+  s.onSecondCall().yields(null, null,JSON.parse(dataTest[1]));
 });
 
 afterEach(() => {
@@ -159,52 +161,44 @@ afterEach(() => {
 
 ezs.use(unit);
 
-describe("The scroll API feature", () => {
+describe("The scrollISTEX function", () => {
   it("should return dataset of the API", done => {
 
-    let s = sandbox.stub(request, "get");
-    s.onFirstCall().yields(null, null,JSON.parse(dataTest[0]));
-    s.onSecondCall().yields(null, null,JSON.parse(dataTest[1]));
-
+    /* Fake URL */
     from(["https://api-v5.istex.fr/document/?q=language:test"])
       .pipe(ezs("scroll"))
-      .pipe(
-        ezs((data, feed) => {
-          expect(dataTest).toContain(JSON.stringify(data));
+      .pipe(ezs((data, feed) =>
+      {
+        expect(dataTest).toContain(JSON.stringify(data));
+        if (data.noMoreScrollResults) {
+          done();
+        }
 
-          if (data.noMoreScrollResults) {
-            done();
-          }
-          feed.end();
-        })
-      );
+        feed.end();
+      })
+    );
   });
 });
 
-
-// describe("The extended nquads conversion feature", () => {
-//   it("should return the dataset to a nquads format", done => {
-//     from(["https://api-v5.istex.fr/document/?q=language:test"])
-//       .pipe(ezs("scroll"))
-//       .pipe(ezs((data,feed) => {
-//         console.log(data);
-//         feed.end();
-//       }));
-//   });
-// });
-
-describe("The scroll API feature", () => {
+describe("The conversion hits to extended Nquads", () => {
   it("should return dataset of the API", done => {
 
-    let s = sandbox.stub(request, "get");
-    s.onFirstCall().yields(null, null,JSON.parse(dataTest[0]));
-    s.onSecondCall().yields(null, null,JSON.parse(dataTest[1]));
+    /* should result of the nquads conversion */
+    let dataNquads = fs.readFileSync('test.txt','utf8');
 
+    /* Fake URL */
     from(["https://api-v5.istex.fr/document/?q=language:test"])
       .pipe(ezs("scroll"))
-      .pipe(ezs("convertIstexQuery"))
-      .pipe(ezs((data,feed) => {
-        console.log(data);
+      .pipe(ezs("convertToNquadsExtended",{ graph:"http://test-unit.fr"}))
+      .pipe(ezs((data,feed) =>
+      {
+        if(data === null)
+        {
+          done();
+        }
+
+        expect(dataNquads).toContain(JSON.stringify(data));
+
         feed.end();
       }))
   });

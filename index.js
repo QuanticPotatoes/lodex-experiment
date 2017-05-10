@@ -10,5 +10,8 @@ const url = ["https://api.istex.fr/document/?q=language:cze"];
 
 let test;
 
-from(url).pipe(ezs("scroll")).pipe(ezs("convertIstexQuery"))
-//.pipe(process.stdout);
+from(url).pipe(ezs("scroll")).pipe(ezs("convertToNquadsExtended",{ graph:"http://test-unit.fr" }))
+ .pipe(ezs((data,feed) => {
+   console.log(data);
+   feed.end();
+ }));

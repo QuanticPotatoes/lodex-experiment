@@ -9,25 +9,33 @@ let v = 0;
 
 exports.request = request;
 
-exports.convertIstexQuery = function(data, feed) {
-
-  if(!data.noMoreScrollResults){
-    feed.end();
+exports.convertToNquadsExtended = function(data, feed) {
+  if(this.isLast()){
+    return feed.close();
   }
 
   const graph = this.getParam("graph", "http://json-ld.org/playground/graph");
   let hits = data.hits;
+
+  //feed.send("coucou");
 
   const context = {
     doi: "http://purl.org/ontology/bibo/doi"
     //"language":"http://purl.org/dc/elements/1.1/langue",
   };
 
+  // if(!data.noMoreScrollResults){
+  //   feed.end();
+  // }
+
   /**
    * Transform "id" to "@id"
    */
   hits.map(e => {
-    e.doi = e.doi[0];
+
+    if("doi" in e){
+      e.doi = e.doi[0];
+    }
     e.id = "https://api-v5.fr/document/" + e.id;
   });
 
@@ -48,9 +56,8 @@ exports.convertIstexQuery = function(data, feed) {
       console.error("toRDF: ", err);
       return feed.end();
     }
-    console.log(nquads);
 
-    //feed.write(nquads);
+    feed.send(nquads);
   });
 };
 
@@ -167,7 +174,7 @@ function scrollRecursive(feed) {
     feed.write(body);
 
     if (body.noMoreScrollResults) {
-      return feed.end();
+      return feed.close();
     }
     return scrollRecursive(feed);
   });
