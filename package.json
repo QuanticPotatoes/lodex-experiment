@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "mocha ezsLocal.spec.js -t 50000"
+    "test": "mocha ezsLocal.spec.js"
   },
   "author": "",
   "license": "ISC",

@@ -10,7 +10,8 @@ let v = 0;
 exports.request = request;
 
 exports.convertIstexQuery = function(data, feed) {
-  if (this.isLast) {
+
+  if(!data.noMoreScrollResults){
     feed.end();
   }
 
@@ -30,9 +31,8 @@ exports.convertIstexQuery = function(data, feed) {
     e.id = "https://api-v5.fr/document/" + e.id;
   });
 
-  let hitsString = JSON.stringify(hits).replace(/\"id\":/g, "\"@id\":");
+  let hitsString = JSON.stringify(hits).replace(/\"id\":/g, '"@id":');
 
-  //console.log(data.hits);
   const doc = {
     "@context": {
       doi: "http://purl.org/ontology/bibo/doi",
@@ -40,18 +40,20 @@ exports.convertIstexQuery = function(data, feed) {
       schema: "http://schema.org/"
     },
     "@id": graph,
-    "@graph":  JSON.parse(hitsString)
+    "@graph": JSON.parse(hitsString)
   };
 
   jsonld.toRDF(doc, { format: "application/nquads" }, (err, nquads) => {
     if (err) {
-      feed.end();
       console.error("toRDF: ", err);
+      return feed.end();
     }
     console.log(nquads);
-    feed.write(nquads);
+
+    //feed.write(nquads);
   });
 };
+
 
 /**
  * scroll use the scrolling features of API istex
@@ -73,7 +75,7 @@ exports.scroll = function(data, feed) {
     /** Remove when api turn to v5 */
     hostname: "api-v5.istex.fr",
     pathname: "document",
-    search: `${query.search}&scroll=30s&output=${output}&size=100&sid=${sid}`
+    search: `${query.search}&scroll=30s&output=${output}&size=10&sid=${sid}`
   };
 
   const options = {
@@ -157,10 +159,13 @@ function scrollRecursive(feed) {
       /* eslint-enable */
       return feed.end();
     }
+
     if (body && body.hits && body.hits.length === 0) {
       return feed.end();
     }
+
     feed.write(body);
+
     if (body.noMoreScrollResults) {
       return feed.end();
     }

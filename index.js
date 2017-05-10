@@ -6,15 +6,9 @@ const fs = require("fs");
 
 ezs.use(require("./ezsLocal"));
 
-const url = ["https://api.istex.fr/document/?q=language:rus"];
+const url = ["https://api.istex.fr/document/?q=language:cze"];
 
 let test;
 
-from(url).pipe(ezs("scroll")).pipe(
-  ezs((data, feed) => {
-    console.log(data.nextScrollURI.length);
-    feed.end();
-  })
-);
-//.pipe(ezs("convertIstexQuery"))
+from(url).pipe(ezs("scroll")).pipe(ezs("convertIstexQuery"))
 //.pipe(process.stdout);
